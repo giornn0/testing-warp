@@ -1,18 +1,38 @@
-use warp::{Filter, reply::Json};
-use serde_json::json;
+mod handlers;
+
+use std::{convert::Infallible, sync::Arc};
+
+use serde::Serialize;
+use warp::{Filter, Rejection, reply::Json};
+use diesel::{r2d2::{ConnectionManager, self}, PgConnection};
+
+use crate::{handlers::jardines::jardines_filter, models::Pool};
+mod models;
+
+#[derive(Serialize)]
+struct Serving{
+    message:String,
+    author:String
+}
 
 #[tokio::main]
 async fn main()-> Result<(), Box<dyn std::error::Error>> {
+    dotenv::dotenv();
     let port = std::env::var("PORT")
         .ok()
         .map(|val| val.parse::<u16>())
         .unwrap_or(Ok(8080))?;
 
-    let hello = warp::path("hello").and(warp::get()).and(warp::path::end()).and_then( json_response);
+    let started = warp::path("api").and(warp::get()).and_then(serve_start);
+    
+    let db_url = std::env::var("DATABASE_URL").expect("Missing database credentials!");
+    let manager = ConnectionManager::<PgConnection>::new(db_url);
+    let pool:Arc<Pool> = Arc::new(r2d2::Pool::builder().build(manager).expect("Failed connection to database!"));
+
 
     let fallback = warp::any().map(|| "Ninguna pagina!");
-
-    let routes = hello.or(fallback);
+    let apis = started.or(jardines_filter(pool)); 
+    let routes = apis.or(fallback);
 
     println!("Starting server on port: {}", port);
 
@@ -26,8 +46,13 @@ async fn main()-> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-async fn json_response()-> Result<Json,warp::Rejection>{
-    let json = json!({"hello":"Prueba de Warp!"});
-    let response = warp::reply::json(&json);
-    Ok(response)
+async fn serve_start()->Result<Json,Rejection>{
+    let api_service = warp::reply::json(&Serving{
+        message:"Bienvenido, API con warp/postgres".to_string(),
+        author:"giornn0".to_string()
+    });
+    Ok(api_service)
+}
+pub fn with_pool (db_pool: Arc<Pool>)->impl Filter<Extract=(Arc<Pool>,),Error= Infallible> + Clone{
+    warp::any().map(move||db_pool.clone())
 }
