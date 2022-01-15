@@ -1,0 +1,11 @@
+-- Your SQL goes here
+CREATE TABLE jardines (
+  id SERIAL PRIMARY KEY,
+  nombre VARCHAR(50) NOT NULL,
+  domicilio VARCHAR(255) NOT NULL,
+  telefono VARCHAR(50) NOT NULL,
+  email VARCHAR(50) NOT NULL,
+  estado BOOLEAN NOT NULL DEFAULT 't',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

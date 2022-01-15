@@ -1,16 +1,10 @@
+extern crate diesel;
+
 use std::sync::Arc;
-
+use diesel::prelude::*;
 use warp::{reply::Json, Rejection, Filter, Reply};
-use serde::Serialize;
 
-use crate::{models::Pool, with_pool};
-
-#[derive(Serialize)]
-struct Test{
-  hello:String,
-  id: Option<i64>
-}
-
+use crate::{models::{Pool,NewJardin, Jardin}, with_pool, schema::jardines, response::response};
 
 pub fn jardines_filter(db_pool: Arc<Pool>)->impl Filter<Extract=impl Reply,Error = Rejection> + Clone{
   let scope = warp::path("jardines");
@@ -24,30 +18,43 @@ pub fn jardines_filter(db_pool: Arc<Pool>)->impl Filter<Extract=impl Reply,Error
     .and(warp::path::param())
     .and(with_pool(db_pool.clone()))
     .and_then(one_jardin);
-  list.or(get_one)
+  let create = scope
+    .and(warp::post())
+    .and(warp::body::json())
+    .and(with_pool(db_pool.clone()))
+    .and_then(create_jardin);
+  let update = scope
+    .and(warp::put())
+    .and(warp::path::param())
+    .and(warp::body::json())
+    .and(with_pool(db_pool.clone()))
+    .and_then(update_jardin);
+  list.or(get_one).or(create).or(update)
 }
 
-async fn all_jardines(_db_pool: Arc<Pool>)-> Result<Json,Rejection>{
-  let mut list:Vec<Test> = Vec::new();
-  let json1 = Test{
-      hello:"Pasamos un listado de jardines111".to_string(),
-      id:None,
-  };
-  let json2 = Test{
-      hello:"Pasamos un listado de jardines".to_string(),
-      id:None
-  };
-  list.push(json1);
-  list.push(json2);
-
-  let response = warp::reply::json(&list);
-  Ok(response)
+async fn all_jardines(db_pool: Arc<Pool>)-> Result<Json,Rejection>{
+  use crate::schema::jardines::dsl::jardines;
+  let conn = db_pool.get().unwrap();
+  let result:Vec<Jardin> = jardines.load::<Jardin>(&conn).expect("Error while retrieving jardines");
+  response(result)
+  
 }
-async fn one_jardin(id:i64,_db_pool: Arc<Pool>)->Result<Json,Rejection>{
-  let json = Test{
-    hello:"Prueba con params!".to_string(),
-    id: Some(id)
-  };
-  let response = warp::reply::json(&json);
-  Ok(response)
+async fn one_jardin(id:i32,db_pool: Arc<Pool>)->Result<Json,Rejection>{
+  use crate::schema::jardines::dsl::jardines;
+  let conn = db_pool.get().unwrap();
+  let result:Jardin = jardines.find(id).get_result(&conn).expect("Error while getting jardin");
+  response(result)
+
+}
+async fn create_jardin(value:NewJardin, db_pool: Arc<Pool>)-> Result<Json,Rejection>{
+  let conn = db_pool.get().unwrap();
+  let result:Jardin = diesel::insert_into(jardines::table).values(&value).get_result(&conn).expect("Error while creating jardin");
+  response(result)
+
+}
+async fn update_jardin(id:i32,value:NewJardin, db_pool: Arc<Pool>) -> Result<Json,Rejection>{
+  use crate::schema::jardines::dsl::jardines;
+  let conn = db_pool.get().unwrap();
+  let result: Jardin = diesel::update(jardines.find(id)).set(value).get_result(&conn).expect("Error updating the jardin");
+  response(result)
 }

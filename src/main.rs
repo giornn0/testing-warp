@@ -1,13 +1,16 @@
-mod handlers;
+#[macro_use]
+extern crate diesel;
 
 use std::{convert::Infallible, sync::Arc};
-
 use serde::Serialize;
 use warp::{Filter, Rejection, reply::Json};
 use diesel::{r2d2::{ConnectionManager, self}, PgConnection};
-
 use crate::{handlers::jardines::jardines_filter, models::Pool};
+
 mod models;
+mod handlers;
+mod schema;
+mod response;
 
 #[derive(Serialize)]
 struct Serving{

@@ -1100,6 +1100,7 @@ dependencies = [
  "diesel",
  "dotenv",
  "serde",
+ "serde_json",
  "tokio",
  "uuid",
  "warp 0.3.2",
