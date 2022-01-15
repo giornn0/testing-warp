@@ -6,7 +6,7 @@ use warp::{reply::Json, Rejection, Filter, Reply};
 
 use crate::{models::{Pool,NewJardin, Jardin}, with_pool, schema::jardines, response::response};
 
-pub fn jardines_filter(db_pool: Arc<Pool>)->impl Filter<Extract=impl Reply,Error = Rejection> + Clone{
+pub fn jardines_filter(db_pool: &Arc<Pool>)->impl Filter<Extract=impl Reply,Error = Rejection> + Clone{
   let scope = warp::path("jardines");
   let list = scope
     .and(warp::get())
@@ -29,7 +29,12 @@ pub fn jardines_filter(db_pool: Arc<Pool>)->impl Filter<Extract=impl Reply,Error
     .and(warp::body::json())
     .and(with_pool(db_pool.clone()))
     .and_then(update_jardin);
-  list.or(get_one).or(create).or(update)
+  let delete = scope
+    .and(warp::delete())
+    .and(warp::path::param())
+    .and(with_pool(db_pool.clone()))
+    .and_then(delete_jardin);
+  list.or(get_one).or(create).or(update).or(delete)
 }
 
 async fn all_jardines(db_pool: Arc<Pool>)-> Result<Json,Rejection>{
@@ -56,5 +61,11 @@ async fn update_jardin(id:i32,value:NewJardin, db_pool: Arc<Pool>) -> Result<Jso
   use crate::schema::jardines::dsl::jardines;
   let conn = db_pool.get().unwrap();
   let result: Jardin = diesel::update(jardines.find(id)).set(value).get_result(&conn).expect("Error updating the jardin");
+  response(result)
+}
+async fn delete_jardin(delete_id:i32, db_pool: Arc<Pool>)-> Result<Json,Rejection>{
+  use crate::schema::jardines::dsl::{jardines, id};
+  let conn = db_pool.get().unwrap();
+  let result = diesel::delete(jardines.filter(id.eq(delete_id))).execute(&conn).expect("Error while deleting jardin");
   response(result)
 }

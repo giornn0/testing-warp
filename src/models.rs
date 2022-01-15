@@ -25,8 +25,7 @@ pub struct NewJardin{
   estado: Option<bool>,
 }
 
-#[derive(Queryable,Serialize, Insertable)]
-#[table_name = "contactos"]
+#[derive(Queryable,Serialize)]
 pub struct Contacto{
   id: i32,
   telefono: String,
@@ -35,4 +34,13 @@ pub struct Contacto{
   jardin_id:i32,
   created_at: chrono::NaiveDateTime,
   updated_at: chrono::NaiveDateTime
+}
+#[derive(Insertable, AsChangeset, Deserialize)]
+#[table_name = "contactos"]
+pub struct NewContacto {
+  telefono: String,
+  email: String,
+  detalles: String,
+  jardin_id:i32,
+
 }
