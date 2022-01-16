@@ -5,7 +5,7 @@ use std::{convert::Infallible, sync::Arc};
 use serde::Serialize;
 use warp::{Filter, Rejection, reply::Json};
 use diesel::{r2d2::{ConnectionManager, self}, PgConnection};
-use crate::{handlers::{jardines::jardines_filter, contactos::contactos_filter}, models::Pool};
+use crate::{handlers::{jardines::jardines_filter, contactos::contactos_filter, image::images_filter}, models::Pool};
 
 mod models;
 mod handlers;
@@ -34,7 +34,7 @@ async fn main()-> Result<(), Box<dyn std::error::Error>> {
 
 
     let fallback = warp::any().map(|| "Ninguna pagina!");
-    let apis = started.or(jardines_filter(&pool)).or(contactos_filter(&pool)); 
+    let apis = started.or(jardines_filter(&pool)).or(contactos_filter(&pool)).or(images_filter()); 
     let routes = apis.or(fallback);
 
     println!("Starting server on port: {}", port);
