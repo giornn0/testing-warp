@@ -34,8 +34,9 @@ async fn main()-> Result<(), Box<dyn std::error::Error>> {
 
 
     let fallback = warp::any().map(|| "Ninguna pagina!");
+    let download_route = warp::path("files").and(warp::fs::dir("./files/"));
     let apis = started.or(jardines_filter(&pool)).or(contactos_filter(&pool)).or(images_filter()); 
-    let routes = apis.or(fallback);
+    let routes = apis.or(download_route).or(fallback);
 
     println!("Starting server on port: {}", port);
 

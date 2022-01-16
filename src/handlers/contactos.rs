@@ -3,12 +3,13 @@ use std::sync::Arc;
 use warp::{Reply, Rejection, Filter, reply::Json};
 use diesel::prelude::*;
 
-use crate::{models::{Pool, Contacto, NewContacto}, with_pool, response::response, schema::contactos};
+use crate::{models::{Pool, Contacto, NewContacto, SearchQuery}, with_pool, response::response, schema::contactos};
 
 pub fn contactos_filter(db_pool: &Arc<Pool>)->impl Filter<Extract= impl Reply, Error= Rejection> + Clone{
   let scope = warp::path("contactos");
   let list = scope
     .and(warp::get())
+    .and(warp::query())
     .and(warp::path::end())
     .and(with_pool(db_pool.clone()))
     .and_then(get_contactos);
@@ -36,10 +37,14 @@ pub fn contactos_filter(db_pool: &Arc<Pool>)->impl Filter<Extract= impl Reply, E
   list.or(get_one).or(create).or(update).or(delete)
 }
 
-async fn get_contactos(db_pool: Arc<Pool>)->Result<Json,Rejection>{
+async fn get_contactos(query:SearchQuery,db_pool: Arc<Pool>)->Result<Json,Rejection>{
   use crate::schema::contactos::dsl::contactos;
   let conn = db_pool.get().unwrap();
-  let result:Vec<Contacto> = contactos.load::<Contacto>(&conn).expect("Error while retrieving all contactos!");
+  let result:Vec<Contacto> = if let Some(take)= query._take{
+    contactos.limit(take).offset(if let Some(page)= query._page{(page-1)*take}else{0}).load::<Contacto>(&conn).expect("Error while retrieving all contactos!")
+  }else{
+    contactos.load::<Contacto>(&conn).expect("Error while retrieving all contactos!")
+  };
   response(result)
 }
 async fn get_contacto(id:i32, db_pool: Arc<Pool>)->Result<Json,Rejection>{

@@ -4,12 +4,15 @@ use std::sync::Arc;
 use diesel::prelude::*;
 use warp::{reply::Json, Rejection, Filter, Reply};
 
-use crate::{models::{Pool,NewJardin, Jardin}, with_pool, schema::jardines, response::response};
+use crate::{models::{Pool,NewJardin, Jardin, SearchQuery}, with_pool, schema::jardines, response::response};
+
+
 
 pub fn jardines_filter(db_pool: &Arc<Pool>)->impl Filter<Extract=impl Reply,Error = Rejection> + Clone{
   let scope = warp::path("jardines");
   let list = scope
     .and(warp::get())
+    .and(warp::query())
     .and(warp::path::end())
     .and(with_pool(db_pool.clone()))
     .and_then(all_jardines);
@@ -37,10 +40,14 @@ pub fn jardines_filter(db_pool: &Arc<Pool>)->impl Filter<Extract=impl Reply,Erro
   list.or(get_one).or(create).or(update).or(delete)
 }
 
-async fn all_jardines(db_pool: Arc<Pool>)-> Result<Json,Rejection>{
+async fn all_jardines(query:SearchQuery,db_pool: Arc<Pool>)-> Result<Json,Rejection>{
   use crate::schema::jardines::dsl::jardines;
   let conn = db_pool.get().unwrap();
-  let result:Vec<Jardin> = jardines.load::<Jardin>(&conn).expect("Error while retrieving jardines");
+  let result = if let Some(take) = query._take {
+    jardines.limit(take).offset(if let Some(page)= query._page{(page-1)*take}else{0}).load::<Jardin>(&conn).expect("Error while retrieving jardines")
+  } else{
+    jardines.load::<Jardin>(&conn).expect("Error while retrieving jardines")
+  };
   response(result)
   
 }
