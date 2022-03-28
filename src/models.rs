@@ -42,7 +42,6 @@ pub struct NewContacto {
   email: String,
   detalles: String,
   jardin_id:i32,
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -50,4 +49,7 @@ pub struct SearchQuery {
     pub _page: Option<i64>,
     pub _take: Option<i64>,
     pub _search: Option<String>
+}
+pub struct UserPayload {
+  pub name: String,
 }

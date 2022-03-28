@@ -37,7 +37,7 @@ pub fn jardines_filter(db_pool: &Arc<Pool>)->impl Filter<Extract=impl Reply,Erro
     .and(warp::path::param())
     .and(with_pool(db_pool.clone()))
     .and_then(delete_jardin);
-  list.or(get_one).or(create).or(update).or(delete)
+    list.or(get_one).or(create).or(update).or(delete)
 }
 
 async fn all_jardines(query:SearchQuery,db_pool: Arc<Pool>)-> Result<Json,Rejection>{
